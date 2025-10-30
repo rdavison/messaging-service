@@ -1,0 +1,13 @@
+(executables
+ (names main)
+ (libraries messaging core_unix.command_unix)
+ (modules main)
+ (preprocess
+  (pps ppx_jane)))
+
+(executables
+ (names message_processor)
+ (libraries messaging core_unix.command_unix)
+ (modules message_processor)
+ (preprocess
+  (pps ppx_jane)))

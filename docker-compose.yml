@@ -1,0 +1,76 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: messaging-service-db
+    environment:
+      POSTGRES_DB: messaging_service
+      POSTGRES_USER: messaging_user
+      POSTGRES_PASSWORD: messaging_password
+      POSTGRES_INITDB_ARGS: --auth-host=md5
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./migrations/001_init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U messaging_user -d messaging_service"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  make_build:
+    build:
+      context: .
+      dockerfile: docker/app/Dockerfile
+      args:
+        TAG: project
+    image: messaging:latest
+    ports:
+      - "5500:5500"
+    volumes:
+      - messaging_build:/home/opam/app/_build
+      - .:/home/opam/app
+    working_dir: /home/opam/app
+    command: dune build bin/main.exe
+  dev:
+    build:
+      context: .
+      dockerfile: docker/app/Dockerfile
+      args:
+        TAG: project
+    image: messaging:latest
+    volumes:
+      - messaging_build:/home/opam/app/_build
+      - .:/home/opam/app
+      - ~/.ssh:/home/opam/.ssh:ro
+      - ~/.config/nvim:/home/opam/.config/nvim
+    working_dir: /home/opam/app
+    command: dune build bin/main.exe -w
+    depends_on:
+      make_build:
+        condition: service_completed_successfully
+  server:
+    build:
+      context: .
+      dockerfile: docker/app/Dockerfile
+      args:
+        TAG: project
+    image: messaging:latest
+    ports:
+      - "5500:5500"
+    volumes:
+      - messaging_build:/home/opam/app/_build
+      - .:/home/opam/app
+    working_dir: /home/opam/app
+    command: ./scripts/dev-run.sh ./_build/default/bin/main.exe
+    depends_on:
+      make_build:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+        restart: true
+
+volumes:
+  postgres_data: 
+  messaging_build: 
