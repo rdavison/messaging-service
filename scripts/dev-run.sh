@@ -6,7 +6,7 @@ NAME="$1"
 BIN="./_build/default/bin/${NAME}.exe"
 ARGS=""
 if [ "$NAME" = "apiserver" ]; then
-  ARGS="-port 5500"
+  ARGS="-port 8080"
 fi
 DIR="$(dirname "$BIN")"
 BASE="$(basename "$BIN")"

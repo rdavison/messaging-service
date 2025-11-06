@@ -6,6 +6,7 @@ let handler (app : App.t) ~(body : Cohttp_async.Body.t) inet (req : Cohttp.Reque
       Log.info "Handling request\n";
       let path = Uri.path (Cohttp.Request.uri req) in
       match String.split ~on:'/' path with
+      | [ ""; "healthz" ] -> Http.respond_string ~status:`OK ""
       | "" :: "api" :: path -> Api.handler app ~body inet req ~path
       | _ -> Http.respond_not_found ())
   with

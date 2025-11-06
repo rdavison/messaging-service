@@ -26,8 +26,6 @@ services:
       args:
         TAG: project
     image: messaging:latest
-    ports:
-      - "5500:5500"
     volumes:
       - messaging_build:/home/opam/app/_build
       - .:/home/opam/app
@@ -76,12 +74,18 @@ services:
         TAG: project
     image: messaging:latest
     ports:
-      - "5500:5500"
+      - "8080:8080"
     volumes:
       - messaging_build:/home/opam/app/_build
       - .:/home/opam/app
     working_dir: /home/opam/app
     command: ./scripts/dev-run.sh apiserver
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/healthz"]
+      interval: 5s
+      timeout: 2s
+      retries: 12
+      start_period: 10s
     depends_on:
       make_build:
         condition: service_completed_successfully

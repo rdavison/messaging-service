@@ -3,6 +3,10 @@ FROM ocaml/opam:ubuntu-24.04-ocaml-5.2
 USER root
 
 RUN \
+  rm -rf /var/lib/apt/lists/* && \
+  apt-get update
+
+RUN \
   apt update && \
   apt install -y git build-essential cmake ninja-build pkg-config libtool autoconf automake gettext curl && \
   git clone --single-branch -b stable https://github.com/neovim/neovim.git && \
