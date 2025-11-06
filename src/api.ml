@@ -298,6 +298,26 @@ module Handlers = struct
     | Some _ | None -> Http.respond_bad_request ()
   ;;
 
+  let api_messages ?message_id (app : App.t) ~body:_ _inet (req : Cohttp.Request.t) =
+    let response messages =
+      Http.respond_json
+        (`Assoc [ "messages", `List (List.map messages ~f:Message.to_json) ])
+    in
+    match req.meth with
+    | `GET ->
+      (match message_id with
+       | None ->
+         let%bind messages = Message.all_get app in
+         response messages
+       | Some message_id ->
+         (match%bind Message.id message_id ~app with
+          | None -> Http.respond_not_found ()
+          | Some message_id ->
+            let%bind message = Message.get_by_id message_id ~app in
+            response [ message_id, message ]))
+    | #Cohttp.Code.meth -> Http.respond_bad_request ()
+  ;;
+
   let api_messages_sms
         (app : App.t)
         ~(body : Cohttp_async.Body.t)
@@ -350,14 +370,30 @@ module Handlers = struct
     | #Cohttp.Code.meth -> Http.respond_bad_request ()
   ;;
 
-  let api_conversations (app : App.t) ~body:_ _inet (req : Cohttp.Request.t) =
+  let api_conversations
+        ?conversation_id
+        (app : App.t)
+        ~body:_
+        _inet
+        (req : Cohttp.Request.t)
+    =
+    let response conversations =
+      Http.respond_json
+        (`Assoc
+            [ "conversations", `List (List.map conversations ~f:Conversation.to_json) ])
+    in
     match req.meth with
     | `GET ->
-      let%bind conversations = Conversations.all_get app in
-      let json =
-        `Assoc [ "conversations", `List (List.map conversations ~f:Conversation.to_json) ]
-      in
-      Http.respond_json json
+      (match conversation_id with
+       | None ->
+         let%bind conversations = Conversation.get_all app in
+         response conversations
+       | Some conversation_id ->
+         (match%bind Conversation.id conversation_id ~app with
+          | None -> Http.respond_not_found ()
+          | Some conversation_id ->
+            let%bind conversation = Conversation.get_by_id conversation_id ~app in
+            response [ conversation_id, conversation ]))
     | #Cohttp.Code.meth -> Http.respond_bad_request ()
   ;;
 
@@ -366,11 +402,11 @@ module Handlers = struct
         ~body:_
         _inet
         (req : Cohttp.Request.t)
-        ~id
+        ~conversation_id
     =
     match req.meth with
     | `GET ->
-      (match%bind Conversation.id id ~app with
+      (match%bind Conversation.id conversation_id ~app with
        | None -> Http.respond_not_found ()
        | Some id ->
          let%bind messages = Message.get_by_conversation_id id ~app in
@@ -391,13 +427,17 @@ let handler
     Monitor.try_with (fun () ->
       Log.info "Handling API request\n";
       match path with
+      | [ "messages" ] -> Handlers.api_messages app ~body inet req
       | [ "messages"; "sms" ] -> Handlers.api_messages_sms app ~body inet req
       | [ "messages"; "email" ] -> Handlers.api_messages_email app ~body inet req
+      | [ "messages"; message_id ] -> Handlers.api_messages app ~body inet req ~message_id
       | [ "webhooks"; "sms" ] -> Handlers.api_webhooks_sms app ~body inet req
       | [ "webhooks"; "email" ] -> Handlers.api_webhooks_email app ~body inet req
       | [ "conversations" ] -> Handlers.api_conversations app ~body inet req
-      | [ "conversations"; id; "messages" ] ->
-        Handlers.api_conversatons_id_messages app ~body inet req ~id
+      | [ "conversations"; conversation_id ] ->
+        Handlers.api_conversations app ~body inet req ~conversation_id
+      | [ "conversations"; conversation_id; "messages" ] ->
+        Handlers.api_conversatons_id_messages app ~body inet req ~conversation_id
       | _ -> Http.respond_not_found ())
   with
   | Ok res -> return res

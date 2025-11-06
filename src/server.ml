@@ -41,7 +41,7 @@ let message_processor ~db_config =
         Log.info "Processing message %d/%d\n" (i + 1) count;
         let%map status = Message_processor.transition_status id ~app in
         Log.info
-          "New status for message with id: %s => %s"
+          "New status for message with id: %s => %s\n"
           (Message.Id.to_string id)
           (Delivery_status.sexp_of_t status |> Sexp.to_string))
     in

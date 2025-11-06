@@ -195,6 +195,13 @@ let insert t ~app =
     ~parse_row:Tbl.Parse_row.id
 ;;
 
+let all_get app =
+  App.query
+    app
+    ~sql:(sprintf "SELECT id,%s FROM messages" Tbl.columns)
+    ~parse_row:Tbl.Parse_row.id_message
+;;
+
 let get_by_id id ~app =
   App.query1
     app
@@ -213,12 +220,27 @@ let get_deliverable app =
     ~parse_row:Tbl.Parse_row.id_message
 ;;
 
-let update_status id status ~app =
+let update_status ?provider ?provider_message_id id status ~app =
   let tag, payload = Delivery_status.to_db status in
-  App.query0
-    app
-    ~sql:"UPDATE messages SET status_tag = $1, status_payload = $2 WHERE id = $3"
-    ~parameters:[| Some tag; payload; Some (Id.to_string id) |]
+  match Option.both provider provider_message_id with
+  | None ->
+    App.query0
+      app
+      ~sql:"UPDATE messages SET status_tag = $1, status_payload = $2 WHERE id = $3"
+      ~parameters:[| Some tag; payload; Some (Id.to_string id) |]
+  | Some (provider_id, provider_message_id) ->
+    App.query0
+      app
+      ~sql:
+        "UPDATE messages SET status_tag = $1, status_payload = $2, provider_id = $3, \
+         provider_message_id = $4 WHERE id = $5"
+      ~parameters:
+        [| Some tag
+         ; payload
+         ; Some (provider_id |> Provider.to_string)
+         ; Some (provider_message_id |> Provider.Message.Id.to_string)
+         ; Some (Id.to_string id)
+        |]
 ;;
 
 let get_by_conversation_id id ~app =
@@ -231,4 +253,12 @@ let get_by_conversation_id id ~app =
          Tbl.columns)
     ~parameters:[| Some (Conversation.Id.to_string id) |]
     ~parse_row:Tbl.Parse_row.id_message
+;;
+
+let id id ~app =
+  App.query1_opt
+    app
+    ~sql:"SELECT id FROM messages WHERE id = $1"
+    ~parameters:[| Some id |]
+    ~parse_row:Tbl.Parse_row.id
 ;;

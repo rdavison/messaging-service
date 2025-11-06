@@ -17,7 +17,17 @@ type t =
 
 val to_json : Id.t * t -> Yojson.Basic.t
 val insert : t -> app:App.t -> Id.t Deferred.t
+val all_get : App.t -> (Id.t * t) list Deferred.t
 val get_by_id : Id.t -> app:App.t -> t Deferred.t
 val get_deliverable : App.t -> (Id.t * t) list Deferred.t
-val update_status : Id.t -> Delivery_status.t -> app:App.t -> unit Deferred.t
+
+val update_status
+  :  ?provider:Provider.t
+  -> ?provider_message_id:Provider.Message.Id.t
+  -> Id.t
+  -> Delivery_status.t
+  -> app:App.t
+  -> unit Deferred.t
+
 val get_by_conversation_id : Conversation.Id.t -> app:App.t -> (Id.t * t) list Deferred.t
+val id : string -> app:App.t -> Id.t option Deferred.t

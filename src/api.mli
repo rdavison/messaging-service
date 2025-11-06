@@ -104,7 +104,8 @@ module Handlers : sig
     -> Cohttp_async.Server.response Deferred.t
 
   val api_conversations
-    :  App.t
+    :  ?conversation_id:string
+    -> App.t
     -> body:'a
     -> 'b
     -> Cohttp.Request.t
@@ -115,7 +116,7 @@ module Handlers : sig
     -> body:'a
     -> 'b
     -> Cohttp.Request.t
-    -> id:string
+    -> conversation_id:string
     -> Cohttp_async.Server.response Deferred.t
 end
 
