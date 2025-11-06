@@ -36,6 +36,8 @@ services:
       context: .
       dockerfile: docker/app/Dockerfile
       args:
+        ARCH: arm64
+        # ARCH: x86_64
         TAG: project
     image: messaging:latest
     volumes:
@@ -53,6 +55,8 @@ services:
       context: .
       dockerfile: docker/app/Dockerfile
       args:
+        ARCH: arm64
+        # ARCH: x86_64
         TAG: project
     image: messaging:latest
     volumes:
@@ -71,6 +75,8 @@ services:
       context: .
       dockerfile: docker/app/Dockerfile
       args:
+        ARCH: arm64
+        # ARCH: x86_64
         TAG: project
     image: messaging:latest
     ports:

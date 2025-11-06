@@ -9,7 +9,6 @@ type t = { config : Config.t }
 let with_db_conn t ~f = Db.with_conn t.config.db ~f >>| Or_error.join
 
 let query ?parameters t ~sql ~parse_row =
-  printf "sql: %s\n" sql;
   let rows = ref [] in
   let%bind result =
     with_db_conn t ~f:(fun conn ->

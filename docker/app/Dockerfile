@@ -14,9 +14,10 @@ RUN \
   make CMAKE_BUILD_TYPE=RelWithDebInfo && \
   make install
 
+
+ARG ARCH=arm64
 RUN \
   VERSION=0.54.2 && \
-  ARCH=arm64 && \
   PLATFORM=linux && \
   FILENAME=lazygit_${VERSION}_${PLATFORM}_${ARCH}.tar.gz && \
   apt update && \
