@@ -57,8 +57,6 @@ services:
       args:
         TAG: project
     image: messaging:latest
-    environment:
-      TZ: UTC
     volumes:
       - messaging_build:/home/opam/app/_build
       - .:/home/opam/app
@@ -77,8 +75,6 @@ services:
       args:
         TAG: project
     image: messaging:latest
-    environment:
-      TZ: UTC
     ports:
       - "5500:5500"
     volumes:
