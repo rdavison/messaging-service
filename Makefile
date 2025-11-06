@@ -54,7 +54,7 @@ install-deps:
 .PHONY: nvim
 nvim:
 	# nvim -c "terminal make exe" -c "terminal make watch" -c 'vsplit' -c 'split' -c 'terminal tail stdout -F' -c 'split' -c 'terminal tail stderr -F' -c 'wincmd h' -c 'Oil' ; exec bash -l
-	nvim -c 'vsplit' -c "terminal watch 'make test'" -c 'split' -c 'terminal tail stdout -F' -c 'split' -c 'terminal tail stderr -F' -c 'wincmd h' -c 'Oil' ; exec bash -l
+	opam-2.4 exec -- nvim -c 'vsplit' -c "terminal watch 'make test'" -c 'split' -c 'terminal tail stdout.message_processor -F' -c 'split' -c 'terminal tail stderr.message_processor -F' -c 'wincmd h' -c 'Oil' ; exec bash -l
 
 .PHONY: start
 start: volume

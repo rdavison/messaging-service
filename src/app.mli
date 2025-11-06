@@ -15,14 +15,21 @@ val query
   :  ?parameters:string option array
   -> t
   -> sql:string
-  -> parse_row:(column_names:string iarray -> values:string option iarray -> 'a)
+  -> parse_row:(column_names:string array -> values:string option array -> 'a)
   -> 'a list Deferred.t
 
 val query1
   :  ?parameters:string option array
   -> t
   -> sql:string
-  -> parse_row:(column_names:string iarray -> values:string option iarray -> 'a)
+  -> parse_row:(column_names:string array -> values:string option array -> 'a)
   -> 'a Deferred.t
 
 val query0 : ?parameters:string option array -> t -> sql:string -> unit Deferred.t
+
+val query1_opt
+  :  ?parameters:string option array
+  -> t
+  -> sql:string
+  -> parse_row:(column_names:string array -> values:string option array -> 'a)
+  -> 'a option Deferred.t

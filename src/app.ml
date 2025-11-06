@@ -6,12 +6,10 @@ end
 
 type t = { config : Config.t }
 
-let with_db_conn t ~f =
-  let%bind.Deferred.Or_error conn = Db.conn t.config.db in
-  f conn
-;;
+let with_db_conn t ~f = Db.with_conn t.config.db ~f >>| Or_error.join
 
 let query ?parameters t ~sql ~parse_row =
+  printf "sql: %s\n" sql;
   let rows = ref [] in
   let%bind result =
     with_db_conn t ~f:(fun conn ->
@@ -27,7 +25,13 @@ let query1 ?parameters t ~sql ~parse_row =
   let%map rows = query ?parameters t ~sql ~parse_row in
   match rows with
   | [ x ] -> x
-  | _ -> failwithf "BUG: Expected exactly 1 result, got %d. Query: %s. Params: %s" (List.length rows) sql ([%sexp_of: string option array option] parameters |> Sexp.to_string) ()
+  | _ ->
+    failwithf
+      "BUG: Expected exactly 1 result, got %d. Query: %s. Params: %s"
+      (List.length rows)
+      sql
+      ([%sexp_of: string option array option] parameters |> Sexp.to_string)
+      ()
 ;;
 
 let query0 ?parameters t ~sql =
@@ -36,4 +40,17 @@ let query0 ?parameters t ~sql =
       Postgres_async.query_expect_no_data conn ?parameters sql)
   in
   Or_error.ok_exn result
+;;
+
+let query1_opt ?parameters t ~sql ~parse_row =
+  match%map query ?parameters t ~sql ~parse_row with
+  | [] -> None
+  | [ x ] -> Some x
+  | rows ->
+    failwithf
+      "BUG: Expected 0 or 1 query result, got %d. Query %s. Params: %s"
+      (List.length rows)
+      sql
+      ([%sexp_of: string option array option] parameters |> Sexp.to_string)
+      ()
 ;;

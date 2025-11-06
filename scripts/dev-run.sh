@@ -2,8 +2,12 @@
 set -Eeuo pipefail
 
 # Usage: scripts/dev-run.sh [path-to-binary]
-BIN="${1:-./_build/default/bin/main.exe}"
-ARGS="-port 5500"
+NAME="$1"
+BIN="./_build/default/bin/${NAME}.exe"
+ARGS=""
+if [ "$NAME" = "apiserver" ]; then
+  ARGS="-port 5500"
+fi
 DIR="$(dirname "$BIN")"
 BASE="$(basename "$BIN")"
 
@@ -17,7 +21,7 @@ pid=""
 start() {
   if [[ -x "$BIN" ]]; then
     echo "▶️  starting $BIN"
-    "$BIN" $ARGS > stdout 2> stderr &
+    "$BIN" $ARGS > "stdout.$NAME" 2> "stderr.$NAME" &
     pid=$!
   else
     echo "… waiting for $BIN to be built"

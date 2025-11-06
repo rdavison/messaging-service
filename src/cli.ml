@@ -1,6 +1,6 @@
 open! Import
 
-let main =
+let apiserver =
   Command.async
     ~summary:"Start web server"
     (let%map_open.Command port =

@@ -1,6 +1,6 @@
 open! Import
 
-type t = Uri of Uri.t
+type t = Uri_sexp.t [@@deriving sexp, compare]
 
 val of_string : string -> t
 val of_jsonb : string -> t list

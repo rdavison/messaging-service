@@ -1,27 +1,33 @@
 open! Import
+module Id : Identifiable.S
 
-module Id : sig
-  type t
-
-  val to_string : t -> string
-
-  module Private : sig
-    val of_string : string -> t
-  end
+module Kind : sig
+  type t =
+    | Phone
+    | Email
+  [@@deriving sexp]
 end
 
 type t =
-  { key : string
-  ; channel : string
+  { source : Endpoint.t
+  ; target : Endpoint.t
   }
+[@@deriving sexp, compare]
 
-val parse_row : string option iarray -> t
-val save : t -> app:App.t -> Id.t Deferred.t
+val to_json : Id.t * t -> Yojson.Basic.t
 
-val get_or_create
-  :  ?topic:string
-  -> app:App.t
-  -> participants:Participant.Set.t
-  -> channel:Channel.t
-  -> unit
-  -> Id.t Deferred.t
+module Db : sig
+  type t =
+    { id : Id.t
+    ; source : Endpoint.t
+    ; target : Endpoint.t
+    ; created_at : Time_ns_unix.t
+    ; modified_at : Time_ns_unix.t
+    }
+  [@@deriving sexp, compare]
+end
+
+val source_target : Endpoint.t -> Endpoint.t -> app:App.t -> Id.t Deferred.t
+val get_by_id : Id.t -> app:App.t -> t Deferred.t
+val get_all : App.t -> (Id.t * t) list Deferred.t
+val id : string -> app:App.t -> Id.t option Deferred.t

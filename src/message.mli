@@ -1,32 +1,23 @@
 open! Import
-
-module Id : sig
-  type t
-
-  val to_string : t -> string
-end
+module Id : Identifiable.S
 
 type t =
   { conversation_id : Conversation.Id.t
-  ; provider_id : Provider.Id.t
-  ; provider_message_id : string option
+  ; source : Endpoint.t
+  ; target : Endpoint.t
   ; inbound_or_outbound : Inbound_or_outbound.t
-  ; participant_source : Participant.t
-  ; participant_target : Participant.t
-  ; channel : Channel.t
+  ; sent_at : Time_ns_unix.t
+  ; provider : Provider.t option
+  ; provider_message_id : Provider.Message.Id.t option
   ; body : string
-  ; attachments : Attachment.t list
-  ; timestamp : Time_ns.t
-  ; status : Status.t
-  ; error_code : string option
-  ; error_message : string option
-  ; created_at : Time_ns.t
-  ; modified_at : Time_ns.t
+  ; attachments : Uri_sexp.t list
+  ; status : Delivery_status.t
   }
+[@@deriving sexp, compare]
 
-val parse_row : string option iarray -> Id.t * t
-val save : t -> app:App.t -> unit Deferred.t
-
-(* val send : Id.t -> app:App.t -> unit Deferred.t *)
-val get_unprocessed : App.t -> (Id.t * t) list Deferred.t
-val process : Id.t -> app:App.t -> Status.t Deferred.t
+val to_json : t -> Yojson.Basic.t
+val insert : t -> app:App.t -> Id.t Deferred.t
+val get_by_id : Id.t -> app:App.t -> t Deferred.t
+val get_deliverable : App.t -> (Id.t * t) list Deferred.t
+val update_status : Id.t -> Delivery_status.t -> app:App.t -> unit Deferred.t
+val get_by_conversation_id : Conversation.Id.t -> app:App.t -> t list Deferred.t

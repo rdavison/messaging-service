@@ -3,6 +3,7 @@ open! Import
 type t =
   | Inbound
   | Outbound
+[@@deriving sexp, compare]
 
 let of_string s =
   match String.lowercase s with

@@ -32,7 +32,7 @@ services:
       - messaging_build:/home/opam/app/_build
       - .:/home/opam/app
     working_dir: /home/opam/app
-    command: dune build bin/main.exe
+    command: dune build @bin/all
   dev:
     build:
       context: .
@@ -46,24 +46,46 @@ services:
       - ~/.ssh:/home/opam/.ssh:ro
       - ~/.config/nvim:/home/opam/.config/nvim
     working_dir: /home/opam/app
-    command: dune build bin/main.exe -w
+    command: dune build bin/apiserver.exe bin/message_processor.exe -w
     depends_on:
       make_build:
         condition: service_completed_successfully
-  server:
+  message_processor:
     build:
       context: .
       dockerfile: docker/app/Dockerfile
       args:
         TAG: project
     image: messaging:latest
+    environment:
+      TZ: UTC
+    volumes:
+      - messaging_build:/home/opam/app/_build
+      - .:/home/opam/app
+    working_dir: /home/opam/app
+    command: ./scripts/dev-run.sh message_processor
+    depends_on:
+      make_build:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+        restart: true
+  apiserver:
+    build:
+      context: .
+      dockerfile: docker/app/Dockerfile
+      args:
+        TAG: project
+    image: messaging:latest
+    environment:
+      TZ: UTC
     ports:
       - "5500:5500"
     volumes:
       - messaging_build:/home/opam/app/_build
       - .:/home/opam/app
     working_dir: /home/opam/app
-    command: ./scripts/dev-run.sh ./_build/default/bin/main.exe
+    command: ./scripts/dev-run.sh apiserver
     depends_on:
       make_build:
         condition: service_completed_successfully

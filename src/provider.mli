@@ -1,13 +1,16 @@
 open! Import
 
-module Id : sig
-  type t
+type t =
+  | Sendgrid
+  | Twilio
+  | Xillio
+  | Messaging_provider
+[@@deriving sexp, compare, enumerate]
 
-  val to_string : t -> string
+val to_string : t -> string
+val of_string : string -> t
+val of_endpoint_kind : Endpoint.Kind.t -> t
 
-  module Private : sig
-    val of_string : string -> t
-  end
+module Message : sig
+  module Id : Identifiable.S
 end
-
-val id_for_channel : Channel.t -> app:App.t -> Id.t option Deferred.t

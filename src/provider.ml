@@ -1,96 +1,35 @@
 open! Import
 
-module Id = struct
-  type t = string
+type t =
+  | Sendgrid
+  | Twilio
+  | Xillio
+  | Messaging_provider
+[@@deriving sexp, compare, enumerate]
 
-  let to_string t = t
-
-  module Private = struct
-    let of_string s = s
-  end
-end
-
-(* module Email = struct *)
-(*   type 't outbound = *)
-(*     { from : Email.t *)
-(*     ; to_ : Email.t *)
-(*     ; type_ : 't *)
-(*     ; body : string *)
-(*     ; attachments : Attachment.t list *)
-(*     ; timestamp : Time_ns.t *)
-(*     } *)
-(**)
-(*   type 't inbound = *)
-(*     { from : Email.t *)
-(*     ; to_ : Email.t *)
-(*     ; type_ : 't *)
-(*     ; messaging_provider_id : string *)
-(*     ; body : string *)
-(*     ; attachments : Attachment.t list *)
-(*     ; timestamp : Time_ns.t *)
-(*     } *)
-(**)
-(*   type t = Sendgrid *)
-(* end *)
-(**)
-(* module SMS_or_MMS = struct *)
-(*   type 't outbound = *)
-(*     { from : Phone_number.t *)
-(*     ; to_ : Phone_number.t *)
-(*     ; type_ : 't *)
-(*     ; body : string *)
-(*     ; attachments : Attachment.t list *)
-(*     ; timestamp : Time_ns.t *)
-(*     } *)
-(**)
-(*   type 't inbound = *)
-(*     { from : Phone_number.t *)
-(*     ; to_ : Phone_number.t *)
-(*     ; type_ : 't *)
-(*     ; messaging_provider_id : string *)
-(*     ; body : string *)
-(*     ; attachments : Attachment.t list *)
-(*     ; timestamp : Time_ns.t *)
-(*     } *)
-(* end *)
-(**)
-(* module SMS = struct *)
-(*   type t = *)
-(*     | Twilio *)
-(*     | Sendgrid *)
-(**)
-(*   type outbound = [ `SMS ] SMS_or_MMS.outbound *)
-(*   type inbound = [ `SMS ] SMS_or_MMS.inbound *)
-(* end *)
-(**)
-(* module MMS = struct *)
-(*   type t = *)
-(*     | Twilio *)
-(*     | Sendgrid *)
-(**)
-(*   type outbound = [ `MMS ] SMS_or_MMS.outbound *)
-(*   type inbound = [ `MMS ] SMS_or_MMS.inbound *)
-(* end *)
-(**)
-(* module Voice = struct *)
-(*   type t = *)
-(*     | Twilio *)
-(*     | Sendgrid *)
-(* end *)
-(**)
-(* module Voicemail = struct *)
-(*   type t = *)
-(*     | Twilio *)
-(*     | Sendgrid *)
-(* end *)
-
-let id_for_channel channel ~(app : App.t) =
-  App.query1
-    app
-    ~parameters:[| Some (Channel.to_string channel) |]
-    ~sql:{|SELECT id FROM provider WHERE channel = $1|}
-    ~parse_row:(fun ~column_names:_ ~values ->
-      match Iarray.to_array values with
-      | [| id |] -> id
-      | _ -> assert false)
+let of_string s =
+  match String.lowercase s with
+  | "sendgrid" -> Sendgrid
+  | "twilio" -> Twilio
+  | "xillio" -> Xillio
+  | "messaging_provider" -> Messaging_provider
+  | other -> failwithf "BUG: Unexpected provider: %s" other ()
 ;;
+
+let to_string = function
+  | Sendgrid -> "sendgrid"
+  | Twilio -> "twilio"
+  | Xillio -> "xillio"
+  | Messaging_provider -> "messaging_provider"
+;;
+
+let of_endpoint_kind kind =
+  match kind with
+  | Endpoint.Kind.Email -> Sendgrid
+  | Phone -> Twilio
+  | Cross -> Twilio
+;;
+
+module Message = struct
+  module Id : Identifiable.S = String
+end

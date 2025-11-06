@@ -1,7 +1,7 @@
 (executables
- (names main)
+ (names apiserver)
  (libraries messaging core_unix.command_unix)
- (modules main)
+ (modules apiserver)
  (preprocess
   (pps ppx_jane)))
 

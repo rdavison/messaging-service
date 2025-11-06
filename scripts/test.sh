@@ -3,7 +3,7 @@
 # Test script for messaging service endpoints
 # This script tests the local messaging service using the JSON examples from README.md
 
-BASE_URL="http://server:5500"
+BASE_URL="http://localhost:5500"
 CONTENT_TYPE="Content-Type: application/json"
 
 echo "=== Testing Messaging Service Endpoints ==="
@@ -37,6 +37,7 @@ curl -X POST "$BASE_URL/api/messages/sms" \
     "timestamp": "2024-11-01T14:00:00Z"
   }' \
   -w "\nStatus: %{http_code}\n\n"
+
 
 # Test 3: Send Email
 echo "3. Testing Email send..."
@@ -94,6 +95,7 @@ curl -X POST "$BASE_URL/api/webhooks/email" \
     "timestamp": "2024-11-01T14:00:00Z"
   }' \
   -w "\nStatus: %{http_code}\n\n"
+
 
 # Test 7: Get conversations
 echo "7. Testing get conversations..."

@@ -1,8 +1,8 @@
 open! Import
 
-type t = Uri of Uri.t
+type t = Uri_sexp.t [@@deriving sexp, compare]
 
-let of_string s = Uri (Uri.of_string s)
+let of_string s = Uri.of_string s
 
 let of_jsonb s =
   let json = Yojson.Basic.from_string s in
@@ -11,6 +11,6 @@ let of_jsonb s =
 ;;
 
 let to_jsonb lst =
-  let json = `List (List.map lst ~f:(fun (Uri uri) -> `String (Uri.to_string uri))) in
+  let json = `List (List.map lst ~f:(fun uri -> `String (Uri.to_string uri))) in
   Yojson.Basic.to_string json
 ;;
