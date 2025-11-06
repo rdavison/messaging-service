@@ -26,7 +26,7 @@ let send_and_transition_status ?after ?(attempt = 0) id message ~app =
   let code = Cohttp.Code.code_of_status http_status in
   let after =
     match after with
-    | None -> Time_ns_unix.now ()
+    | None -> Time_float_unix.now ()
     | Some time -> time
   in
   let status =

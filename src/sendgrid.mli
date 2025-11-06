@@ -1,7 +1,7 @@
 open! Import
 
 val send_and_transition_status
-  :  ?after:Time_ns.t
+  :  ?after:Time_float.t
   -> ?attempt:int
   -> Message.Id.t
   -> Message.t

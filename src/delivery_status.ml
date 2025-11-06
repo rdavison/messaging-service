@@ -8,7 +8,7 @@ type failed =
 
 type retry =
   { attempt : int
-  ; after : Time_ns_unix.t
+  ; after : Time_float_unix.Stable.With_utc_sexp.V2.t
   }
 [@@deriving sexp, compare]
 
