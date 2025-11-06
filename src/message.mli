@@ -15,9 +15,9 @@ type t =
   }
 [@@deriving sexp, compare]
 
-val to_json : t -> Yojson.Basic.t
+val to_json : Id.t * t -> Yojson.Basic.t
 val insert : t -> app:App.t -> Id.t Deferred.t
 val get_by_id : Id.t -> app:App.t -> t Deferred.t
 val get_deliverable : App.t -> (Id.t * t) list Deferred.t
 val update_status : Id.t -> Delivery_status.t -> app:App.t -> unit Deferred.t
-val get_by_conversation_id : Conversation.Id.t -> app:App.t -> t list Deferred.t
+val get_by_conversation_id : Conversation.Id.t -> app:App.t -> (Id.t * t) list Deferred.t

@@ -16,23 +16,25 @@ type t =
 [@@deriving sexp, compare]
 
 let to_json
-      ({ conversation_id : Conversation.Id.t
-       ; source : Endpoint.t
-       ; target : Endpoint.t
-       ; inbound_or_outbound : Inbound_or_outbound.t
-       ; sent_at : Time_ns_unix.t
-       ; provider : Provider.t option
-       ; provider_message_id : Provider.Message.Id.t option
-       ; body : string
-       ; attachments : Attachment.t list
-       ; status : Delivery_status.t
-       } :
-        t)
+      (( id
+       , { conversation_id : Conversation.Id.t
+         ; source : Endpoint.t
+         ; target : Endpoint.t
+         ; inbound_or_outbound : Inbound_or_outbound.t
+         ; sent_at : Time_ns_unix.t
+         ; provider : Provider.t option
+         ; provider_message_id : Provider.Message.Id.t option
+         ; body : string
+         ; attachments : Attachment.t list
+         ; status : Delivery_status.t
+         } ) :
+        Id.t * t)
   =
   let module U = Yojson.Basic.Util in
   let status_tag, status_payload = Delivery_status.to_db status in
   `Assoc
-    [ "conversation_id", `String (Conversation.Id.to_string conversation_id)
+    [ "id", `String (Id.to_string id)
+    ; "conversation_id", `String (Conversation.Id.to_string conversation_id)
     ; "endpoint_source", `String (Endpoint.payload_to_db source)
     ; "endpoint_target", `String (Endpoint.payload_to_db target)
     ; ( "provider_id"
@@ -224,9 +226,9 @@ let get_by_conversation_id id ~app =
     app
     ~sql:
       (sprintf
-         "SELECT %s FROM messages WHERE conversation_id = $1 AND status_tag = 'ok' ORDER \
-          BY sent_at DESC"
+         "SELECT id,%s FROM messages WHERE conversation_id = $1 AND status_tag = 'ok' \
+          ORDER BY sent_at DESC"
          Tbl.columns)
     ~parameters:[| Some (Conversation.Id.to_string id) |]
-    ~parse_row:Tbl.Parse_row.message
+    ~parse_row:Tbl.Parse_row.id_message
 ;;
