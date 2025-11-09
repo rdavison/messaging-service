@@ -1,126 +1,67 @@
-HOST_PATH := $(shell pwd)
-TAG := $(notdir $(HOST_PATH))
-CONTAINER_HOME := /home/opam
-CONTAINER_PATH := $(CONTAINER_HOME)/app
-CONTAINER_PATH_SKIP_DEPEXT := $(CONTAINER_PATH)-skip-depext
-VOLUME_NAME := $(TAG)
-DBVOLUME_NAME := $(TAG)-db
-DOCKER := docker run --network messaging --name $(TAG) --rm -it -p 5500:5500 -v $(HOME)/.ssh:$(CONTAINER_HOME)/.ssh -v $(VOLUME_NAME):$(CONTAINER_PATH)/_build -v $(HOME)/.config/nvim:$(CONTAINER_HOME)/.config/nvim -v $(HOST_PATH):$(CONTAINER_PATH) -w $(CONTAINER_PATH) $(TAG)
-DOCKER_NO_RM := docker run --network messaging --name $(TAG) -it -p 5500:5500 -v $(HOME)/.ssh:$(CONTAINER_HOME)/.ssh -v $(VOLUME_NAME):$(CONTAINER_PATH)/_build -v $(HOME)/.config/nvim:$(CONTAINER_HOME)/.config/nvim -v $(HOST_PATH):$(CONTAINER_PATH) -w $(CONTAINER_PATH) $(TAG)
-DOCKER_SKIP_DEPEXT := docker run --network messaging --name $(TAG) --rm -it -p 5500:5500 -v $(HOME)/.ssh:$(CONTAINER_HOME)/.ssh -v $(VOLUME_NAME):$(CONTAINER_PATH_SKIP_DEPEXT)/_build -v $(HOME)/.config/nvim:$(CONTAINER_HOME)/.config/nvim -v $(HOST_PATH):$(CONTAINER_PATH_SKIP_DEPEXT) -w $(CONTAINER_PATH_SKIP_DEPEXT) $(TAG)
+.PHONY: setup run test clean clean-test help db-up db-down db-logs db-shell
 
-.PHONY: default
-default: watch
+help:
+	@echo "Available commands:"
+	@echo "  setup      - Set up the project environment and start database"
+	@echo "  run        - Run the application"
+	@echo "  test       - Run tests"
+	@echo "  clean      - Clean up temporary files and stop containers"
+	@echo "  clean-test - Clean up test database only"
+	@echo "  db-up      - Start the PostgreSQL database"
+	@echo "  db-down    - Stop the PostgreSQL database"
+	@echo "  db-logs    - Show database logs"
+	@echo "  db-shell   - Connect to the database shell"
+	@echo "  help       - Show this help message"
 
-.PHONY: shell
-shell:
-	$(DOCKER) bash
+setup:
+	@echo "Setting up the project..."
+	@docker compose build --pull
+	@echo "Starting PostgreSQL database..."
+	@docker compose up db-reinit
+	@echo "Setup complete!"
 
-duniverse:
-	$(DOCKER_SKIP_DEPEXT) opam monorepo pull
-
-.PHONY: run
 run:
-	$(DOCKER) dune exec src/main.exe
+	@echo "Running the application..."
+	@./bin/start.sh
 
-.PHONY: volume
-volume:
-	@if ! docker volume inspect $(VOLUME_NAME) >/dev/null 2>&1; then \
-		docker volume create $(VOLUME_NAME); \
-	fi
-
-.PHONY: db-volume
-db-volume:
-	@if ! docker volume inspect $(DBVOLUME_NAME) >/dev/null 2>&1; then \
-		docker volume create $(DBVOLUME_NAME); \
-	fi
-
-.PHONY: watch
-watch: install-deps
-	dune build bin/main.exe -w
-
-.PHONY: watch-all
-watch-all: install-deps
-	dune build @all -w
-
-.PHONY: exe
-exe:
-	./scripts/dev-run.sh ./_build/default/bin/main.exe
-
-.PHONY: install-deps
-install-deps:
-	opam install . --deps-only
-
-.PHONY: nvim
-nvim:
-	# nvim -c "terminal make exe" -c "terminal make watch" -c 'vsplit' -c 'split' -c 'terminal tail stdout -F' -c 'split' -c 'terminal tail stderr -F' -c 'wincmd h' -c 'Oil' ; exec bash -l
-	opam-2.4 exec -- nvim -c 'vsplit' -c "terminal watch 'make test'" -c 'split' -c 'terminal tail stdout.message_processor -F' -c 'split' -c 'terminal tail stderr.message_processor -F' -c 'wincmd h' -c 'Oil' ; exec bash -l
-
-.PHONY: start
-start: volume
-	# $(DOCKER) dune build web/main.bc.js
-	$(DOCKER) make nvim
-
-.PHONY: start-db
-start-db: db-volume
-	# $(DOCKER) dune build web/main.bc.js
-	docker run --name $(TAG)-db -it \
-		-e POSTGRES_DB=messaging_service \
-		-e POSTGRES_USER=messaging_user \
-		-e POSTGRES_PASSWORD=messaging_password \
-		-e POSTGRES_INITDB_ARGS="--auth-host=md5" \
-		-p 5432:5432 \
-		--network messaging \
-		-v $(DBVOLUME_NAME):/var/lib/postgresql/data \
-		-v ./migrations/001_init.sql:/docker-entrypoint-initdb.d/init.sql \
-		--health-cmd='pg_isready -U messaging_user -d messaging_service' \
-		--health-interval=10s \
-		--health-timeout=5s \
-		--health-retries=5 \
-		postgres:15-alpine
-
-.PHONY: start-no-rm
-start-no-rm: volume
-	$(DOCKER_NO_RM) make nvim
-
-.PHONY: resume
-resume: volume
-	docker start -ai $(TAG)
-
-.PHONY: stop
-stop:
-	docker stop $(TAG)
-
-.PHONY: build
-build: duniverse
-	$(DOCKER) dune build
-
-.PHONY: lock
-lock:
-	$(DOCKER) opam monorepo lock
-
-.PHONY: clean
-clean:
-	-@$(DOCKER_SKIP_DEPEXT) dune clean
-
-.PHONY: distclean
-distclean: stop clean
-	@rm -rf _opam
-	@$(DOCKER_SKIP_DEPEXT) rm -rf duniverse
-	@docker volume rm $(VOLUME_NAME)
-
-.PHONY: docker-lazygit
-docker-lazygit:
-	docker build -t lazygit docker/lazygit
-
-.PHONY: docker-ocamlformat
-docker-ocamlformat:
-	docker build -t ocamlformat docker/ocamlformat
-
-.PHONY: docker
-docker: docker-ocamlformat docker-lazygit
-	docker build --build-arg TAG=$(TAG) -t $(TAG) -f docker/app/Dockerfile .
-
-.PHONY: test
 test:
-	./scripts/test.sh
+	@echo "Running tests..."
+	@echo "Starting test database if not running..."
+	@docker compose up -d test-db
+	@echo "Running test script..."
+	@./bin/test.sh
+
+clean-test:
+	@echo "Cleaning up test db..."
+	@echo "Stopping and removing containers..."
+	@docker compose stop test-db
+	@docker compose rm -f test-db
+	@echo "Removing any temporary files..."
+	@rm -rf *.log *.tmp
+
+clean:
+	@echo "Cleaning up..."
+	@echo "Stopping and removing containers (and volumes)..."
+	@docker compose down -v
+	@echo "Removing any temporary files..."
+	@rm -rf *.log *.tmp
+
+db-up:
+	@echo "Starting PostgreSQL database..."
+	@docker compose up -d app-db
+
+db-stop:
+	@echo "Stopping PostgreSQL database..."
+	@docker compose stop app-db
+
+db-rm:
+	@echo "Destroying PostgreSQL database..."
+	@docker compose rm -f app-db
+
+db-logs:
+	@echo "Showing database logs..."
+	@docker compose logs -f app-db
+
+db-shell:
+	@echo "Connecting to database shell..."
+	@docker compose exec app-db psql -U app-db-user -d app-db-id

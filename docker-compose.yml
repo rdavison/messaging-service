@@ -1,91 +1,68 @@
-version: '3.8'
-
 services:
-  postgres:
+  app-db:
     image: postgres:15-alpine
-    container_name: messaging-service-db
     environment:
-      POSTGRES_DB: messaging_service
-      POSTGRES_USER: messaging_user
-      POSTGRES_PASSWORD: messaging_password
-      POSTGRES_INITDB_ARGS: --auth-host=md5
+      POSTGRES_DB: app-db-id
+      POSTGRES_USER: app-db-user
+      POSTGRES_PASSWORD: app-db-password
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - app-db-volume:/var/lib/postgresql/data
       - ./migrations/001_init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U messaging_user -d messaging_service"]
       interval: 10s
       timeout: 5s
       retries: 5
-  make_build:
-    build:
-      context: .
-      dockerfile: docker/app/Dockerfile
-      args:
-        TAG: project
-    image: messaging:latest
+  test-db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: test-db-id
+      POSTGRES_USER: test-db-user
+      POSTGRES_PASSWORD: test-db-password
+    ports:
+      - "6543:6543"
     volumes:
-      - messaging_build:/home/opam/app/_build
-      - .:/home/opam/app
-    working_dir: /home/opam/app
-    command: dune build @bin/all
-  dev:
+      - test-db-volume:/var/lib/postgresql/data
+      - ./migrations/001_init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U messaging_user -d messaging_service"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  db-reinit:
     build:
-      context: .
-      dockerfile: docker/app/Dockerfile
-      args:
-        ARCH: arm64
-        # ARCH: x86_64
-        TAG: project
-    image: messaging:latest
+      context: ./docker/db-reinit
+      dockerfile: Dockerfile
+    command: hasta-la-vista-baby "app-apiserver,app-db:app-db-volume" "-test-db:test-db-volume"
     volumes:
-      - messaging_build:/home/opam/app/_build
-      - .:/home/opam/app
-      - ~/.ssh:/home/opam/.ssh:ro
-      - ~/.config/nvim:/home/opam/.config/nvim
-    working_dir: /home/opam/app
-    command: dune build bin/apiserver.exe bin/message_processor.exe -w
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${PWD}:${PWD}:ro
+    working_dir: ${PWD}
+    environment:
+      COMPOSE_PROJECT_NAME: messaging-svc
+      APP_DB__POSTGRES_DB: app-db-id
+      APP_DB__POSTGRES_USER: app-db-user
+      APP_DB__POSTGRES_PASSWORD: app-db-password
+      TEST_DB__POSTGRES_DB: test-db-id
+      TEST_DB__POSTGRES_USER: test-db-user
+      TEST_DB__POSTGRES_PASSWORD: test-db-password
     depends_on:
-      make_build:
-        condition: service_completed_successfully
-  message_processor:
-    build:
-      context: .
-      dockerfile: docker/app/Dockerfile
-      args:
-        ARCH: arm64
-        # ARCH: x86_64
-        TAG: project
-    image: messaging:latest
-    volumes:
-      - messaging_build:/home/opam/app/_build
-      - .:/home/opam/app
-    working_dir: /home/opam/app
-    command: ./scripts/dev-run.sh message_processor
-    depends_on:
-      make_build:
-        condition: service_completed_successfully
-      postgres:
+      test-db:
         condition: service_healthy
-        restart: true
-  apiserver:
+      app-db:
+        condition: service_healthy
+  app-apiserver:
     build:
       context: .
       dockerfile: docker/app/Dockerfile
-      args:
-        ARCH: arm64
-        # ARCH: x86_64
-        TAG: project
-    image: messaging:latest
     ports:
       - "8080:8080"
-    volumes:
-      - messaging_build:/home/opam/app/_build
-      - .:/home/opam/app
     working_dir: /home/opam/app
-    command: ./scripts/dev-run.sh apiserver
+    command: app
+    environment:
+      DATABASE_URL: postgres://app-db-user:app-db-password@app-db:5432/app-db-id?sslmode=disable
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:8080/healthz"]
       interval: 5s
@@ -93,12 +70,9 @@ services:
       retries: 12
       start_period: 10s
     depends_on:
-      make_build:
-        condition: service_completed_successfully
-      postgres:
+      app-db:
         condition: service_healthy
-        restart: true
 
 volumes:
-  postgres_data: 
-  messaging_build: 
+  app-db-volume:
+  test-db-volume:

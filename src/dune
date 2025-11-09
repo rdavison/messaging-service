@@ -1,6 +1,0 @@
-(library
- (name messaging)
- (libraries async cohttp-async postgres_async yojson)
- (flags :standard -open Core -open Async)
- (preprocess
-  (pps ppx_jane)))

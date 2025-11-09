@@ -1,0 +1,102 @@
+#!/usr/bin/env python3
+# hasta-la-vista-baby
+# minimal docker-compose reset utility
+#
+# Syntax:
+#   services:volumes
+#     - services: comma-separated; prefix with '-' to leave down (default: up)
+#     - volumes:  comma-separated volume names (all are deleted; no leading '-')
+#
+# Examples:
+#   ./hasta-la-vista-baby "db,-api:pgdata,redis"
+#   ./hasta-la-vista-baby "testdb,-testapi:testpgdata,testredis"
+
+import os, shlex, subprocess, sys
+
+def run(cmd):
+    print("+", " ".join(shlex.quote(c) for c in cmd))
+    subprocess.run(cmd, check=False)
+
+def parse(expr):
+    if ":" not in expr:
+        print(f"Invalid format: '{expr}' (expected services:volumes)")
+        sys.exit(1)
+
+    s_csv, v_csv = expr.split(":", 1)
+
+    # Parse services
+    seen = set()
+    services = []
+    for tok in s_csv.split(","):
+        tok = tok.strip()
+        if not tok:
+            continue
+        if tok == "-":
+            print("Invalid service token '-': service name missing.")
+            sys.exit(1)
+        if tok.startswith("-"):
+            name = tok[1:].strip()
+            if not name:
+                print("Invalid service token '-<empty>'.")
+                sys.exit(1)
+            key = ("down", name)
+            if key not in seen:
+                services.append((name, "down"))
+                seen.add(key)
+        else:
+            name = tok
+            key = ("up", name)
+            if key not in seen:
+                services.append((name, "up"))
+                seen.add(key)
+
+    if not services:
+        print("At least one service is required on the left side of ':'.")
+        sys.exit(1)
+
+    # Parse volumes (all deleted; must not start with '-')
+    vols = []
+    for x in v_csv.split(","):
+        x = x.strip()
+        if not x:
+            continue
+        if x.startswith("-"):
+            print(f"Invalid volume '{x}': '-' prefix is not allowed for volumes in this DSL.")
+            sys.exit(1)
+        if x not in vols:
+            vols.append(x)
+
+    return services, vols
+
+def main():
+    prog = os.path.basename(sys.argv[0])
+    if len(sys.argv) < 2:
+        print(f"Usage: {prog} \"services:volumes\" [...]")
+        sys.exit(1)
+
+    project = os.getenv("COMPOSE_PROJECT_NAME") or os.path.basename(os.getcwd())
+
+    for expr in sys.argv[1:]:
+        print(f">>> {expr}")
+        services, vols = parse(expr)
+        svc_names = [n for n, _ in services]
+
+        # stop & remove the specified services
+        run(["docker", "compose", "stop", *svc_names])
+        run(["docker", "compose", "rm", "-f", *svc_names])
+
+        # delete all listed volumes (format: <project>_<name>)
+        for name in vols:
+            vol = f"{project}_{name}"
+            run(["docker", "volume", "inspect", vol])
+            run(["docker", "volume", "rm", "-f", vol])
+
+        # bring back only services marked "up"
+        to_up = [n for n, a in services if a == "up"]
+        if to_up:
+            run(["docker", "compose", "up", "-d", *to_up])
+
+        print("-" * 40)
+
+if __name__ == "__main__":
+    main()
