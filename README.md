@@ -148,7 +148,7 @@ sequenceDiagram
 
 ---
 
-## ⚙️ Design Principles
+## Design Principles
 
 * **Transactional Outbox Pattern** — ensures reliability and idempotence for outbound messaging.
 * **Provider Agnostic** — app-processor dynamically chooses a provider per message.
@@ -157,7 +157,7 @@ sequenceDiagram
 
 ---
 
-## 🧠 Summary
+## Summary
 
 The messaging service project cleanly separates responsibilities:
 
