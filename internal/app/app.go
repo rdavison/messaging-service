@@ -8,10 +8,11 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/rdavison/messaging-service/internal/build"
+	"github.com/rdavison/messaging-service/internal/api"
 	"github.com/rdavison/messaging-service/internal/config"
 	"github.com/rdavison/messaging-service/internal/db"
 	"github.com/rdavison/messaging-service/internal/processor"
+	"github.com/rdavison/messaging-service/internal/provider"
 )
 
 type App struct {
@@ -31,7 +32,7 @@ func New(ctx context.Context, cfg config.Config, logger *log.Logger) (*App, erro
 		return nil, err
 	}
 
-	h := build.HTTPHandler(pool)
+	h := api.NewRouter(pool)
 	srv := &http.Server{
 		Addr:         cfg.Addr,
 		Handler:      h,
@@ -41,7 +42,10 @@ func New(ctx context.Context, cfg config.Config, logger *log.Logger) (*App, erro
 		ErrorLog:     logger,
 	}
 
-	provRouter := build.ProviderRouter()
+	provRouter := processor.SimpleRouter{
+		SMS:   provider.TwilioProvider{},
+		Email: provider.SendgridProvider{},
+	}
 	entry := processor.NewEntrypoint(pool, provRouter, logger)
 
 	return &App{
