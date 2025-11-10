@@ -6,7 +6,6 @@ help:
 	@echo "  run        - Run the application"
 	@echo "  test       - Run tests"
 	@echo "  clean      - Clean up temporary files and stop containers"
-	@echo "  clean-test - Clean up test database only"
 	@echo "  db-up      - Start the PostgreSQL database"
 	@echo "  db-down    - Stop the PostgreSQL database"
 	@echo "  db-logs    - Show database logs"
@@ -33,14 +32,6 @@ test:
 	@echo "Tearing down test services"
 	@docker compose stop test-db test-apiserver test-processor
 	@docker compose rm -f test-db test-apiserver test-processor
-
-clean-test:
-	@echo "Cleaning up test db..."
-	@echo "Stopping and removing containers..."
-	@docker compose stop test-db
-	@docker compose rm -f test-db
-	@echo "Removing any temporary files..."
-	@rm -rf *.log *.tmp
 
 clean:
 	@echo "Cleaning up..."
