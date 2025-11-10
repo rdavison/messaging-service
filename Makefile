@@ -26,7 +26,7 @@ run:
 test:
 	@echo "Running tests..."
 	@echo "Starting test database if not running..."
-	@docker compose up -d test-db test-apiserver test-processor
+	@docker compose up -d test-db test-apiserver test-processor --wait --wait-timeout 120
 	@echo "Running test script..."
 	@./bin/test.sh
 	@echo "Tearing down test services"

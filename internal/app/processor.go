@@ -49,6 +49,7 @@ func NewProcessor(ctx context.Context, cfg config.Config, logger *log.Logger) (*
 
 	h := chi.NewRouter()
 	h.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		// TODO: Do something more sophisticated
 		w.WriteHeader(http.StatusOK)
 	})
 
@@ -74,6 +75,14 @@ func NewProcessor(ctx context.Context, cfg config.Config, logger *log.Logger) (*
 }
 
 func (a *appProcessor) Start(ctx context.Context) {
+	// start the server (for the health check)
+	go func() {
+		a.logger.Printf("listening on %s", a.server.Addr)
+		if err := a.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			a.logger.Fatalf("http server: %v", err)
+		}
+	}()
+
 	go func() {
 		if err := a.entry.Run(ctx); err != nil && ctx.Err() == nil {
 			a.logger.Printf("processor stopped: %v", err)

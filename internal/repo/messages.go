@@ -481,7 +481,7 @@ LIMIT $1 OFFSET $2
 	}
 	defer rows.Close()
 
-	var out []domain.Message
+	out := make([]domain.Message, 0)
 	for rows.Next() {
 		var (
 			id, convID                int64

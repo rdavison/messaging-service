@@ -118,7 +118,7 @@ ORDER BY id ASC`
 	}
 	defer rows.Close()
 
-	var out []domain.Conversation
+	out := make([]domain.Conversation, 0)
 	for rows.Next() {
 		var (
 			id      int64

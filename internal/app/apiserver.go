@@ -70,6 +70,7 @@ func NewAPIServer(ctx context.Context, cfg config.Config, logger *log.Logger) (*
 }
 
 func (a *appApiserver) Start(ctx context.Context) {
+	// start the api server
 	go func() {
 		a.logger.Printf("listening on %s", a.server.Addr)
 		if err := a.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
