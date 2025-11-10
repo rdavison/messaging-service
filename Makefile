@@ -27,9 +27,12 @@ run:
 test:
 	@echo "Running tests..."
 	@echo "Starting test database if not running..."
-	@docker compose up -d test-db
+	@docker compose up -d test-db test-apiserver test-processor
 	@echo "Running test script..."
 	@./bin/test.sh
+	@echo "Tearing down test services"
+	@docker compose stop test-db test-apiserver test-processor
+	@docker compose rm -f test-db test-apiserver test-processor
 
 clean-test:
 	@echo "Cleaning up test db..."

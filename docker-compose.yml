@@ -11,7 +11,23 @@ services:
       - app-db-volume:/var/lib/postgresql/data
       - ./migrations/001_init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U messaging_user -d messaging_service"]
+      test: ["CMD-SHELL", "pg_isready -U app-db-user -d app-db-id"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  test-db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: test-db-id
+      POSTGRES_USER: test-db-user
+      POSTGRES_PASSWORD: test-db-password
+    ports:
+      - "6543:5432"
+    volumes:
+      - test-db-volume:/var/lib/postgresql/data
+      - ./migrations/001_init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U test-db-user -d test-db-id"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -19,7 +35,7 @@ services:
     build:
       context: ./docker/db-reinit
       dockerfile: Dockerfile
-    command: hasta-la-vista-baby "app-apiserver,app-db:app-db-volume"
+    command: hasta-la-vista-baby "app-apiserver,app-db:app-db-volume" "-test-db:test-db-volume"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ${PWD}:${PWD}:ro
@@ -29,7 +45,12 @@ services:
       APP_DB__POSTGRES_DB: app-db-id
       APP_DB__POSTGRES_USER: app-db-user
       APP_DB__POSTGRES_PASSWORD: app-db-password
+      TEST_DB__POSTGRES_DB: test-db-id
+      TEST_DB__POSTGRES_USER: test-db-user
+      TEST_DB__POSTGRES_PASSWORD: test-db-password
     depends_on:
+      test-db:
+        condition: service_healthy
       app-db:
         condition: service_healthy
   app-apiserver:
@@ -66,6 +87,43 @@ services:
     depends_on:
       app-db:
         condition: service_healthy
+  test-apiserver:
+    build:
+      context: .
+      dockerfile: docker/app/Dockerfile
+    ports:
+      - "8081:8081"
+    command: apiserver
+    environment:
+      DATABASE_URL: postgres://test-db-user:test-db-password@test-db:5432/test-db-id?sslmode=disable
+      ADDR: ":8081"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8081/healthz"]
+      interval: 5s
+      timeout: 2s
+      retries: 12
+      start_period: 10s
+    depends_on:
+      test-db:
+        condition: service_healthy
+  test-processor:
+    build:
+      context: .
+      dockerfile: docker/app/Dockerfile
+    command: processor
+    environment:
+      DATABASE_URL: postgres://test-db-user:test-db-password@test-db:6543/test-db-id?sslmode=disable
+      ADDR: ":8081"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8081/healthz"]
+      interval: 5s
+      timeout: 2s
+      retries: 12
+      start_period: 10s
+    depends_on:
+      test-db:
+        condition: service_healthy
 
 volumes:
   app-db-volume:
+  test-db-volume:
