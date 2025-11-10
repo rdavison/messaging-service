@@ -19,7 +19,7 @@ make test
 
 ---
 
-## 🧩 System Overview
+## System Overview
 
 The messaging service follows a classic transactional-outbox pattern.  
 Outbound messages are first stored in the database, and only later processed by a background worker.  
@@ -34,9 +34,9 @@ flowchart LR
 
   %% Internal services
   subgraph Messaging Service
-    API[app_apiserver]
-    MP[app_processor]
-    DB[(db)]
+    API[app-apiserver]
+    MP[app-processor]
+    DB[(app-db)]
   end
 
   %% Schema hint
@@ -49,7 +49,7 @@ flowchart LR
   %% Processor polling + delivery
   MP <-->|poll messages with status: outbox or retry| DB
   MP -->|choose provider & send| Provider
-  Provider -->|delivery result: success / retryable / permanent| MP
+  Provider -->|delivery result: ok / retry / failed| MP
   MP -->|UPDATE status, provider_id, provider_message_id| DB
 
   %% Inbound flow
@@ -60,14 +60,14 @@ flowchart LR
 ### Description
 
 1. **Clients** call the API to send new outbound messages.
-2. The **API server** validates input and inserts a new record into the database with `status = 'outbox'`.
-3. The **app_processor** polls for messages in `outbox` or `retry` status, determines which provider to use (e.g., Twilio, SendGrid), and attempts delivery.
-4. The **provider** responds with success or failure; the app_processor updates the record’s `status`, `provider_id`, and related fields accordingly.
+2. The **app-apiserver** validates input and inserts a new record into the database with `status = 'outbox'`.
+3. The **app-processor** polls for messages in `outbox` or `retry` status, determines which provider to use (e.g., Twilio, SendGrid), and attempts delivery.
+4. The **provider** responds with success or failure; the app-processor updates the record’s `status`, `provider_id`, and related fields accordingly.
 5. **Inbound messages** (e.g., replies or incoming emails) arrive as provider webhooks to the API, which saves them directly to the database.
 
 ---
 
-## 📤 Outbound Message Lifecycle
+## Outbound Message Lifecycle
 
 The following sequence diagram shows the detailed steps when a client creates an outbound message.
 
@@ -75,9 +75,9 @@ The following sequence diagram shows the detailed steps when a client creates an
 sequenceDiagram
   autonumber
   participant C as Client
-  participant A as app_apiserver
-  participant D as db
-  participant P as app_processor
+  participant A as app-apiserver
+  participant D as app-db
+  participant P as app-processor
   participant V as Provider
 
   rect rgb(240,245,255)
@@ -108,12 +108,12 @@ sequenceDiagram
 
 * The **client** issues an HTTP `POST /api/messages/*` request.
 * The **API server** writes a new record into the `messages` table with an initial status of `outbox`.
-* The **app_processor** periodically polls for messages in `outbox` or `retry` status.
+* The **app-processor** periodically polls for messages in `outbox` or `retry` status.
 * For each message, it determines the proper **provider**, sends the message, and updates the database with the outcome.
 
 ---
 
-## 📥 Inbound Message Flow
+## Inbound Message Flow
 
 Inbound messages come from external providers via webhooks.
 These are recorded immediately by the API server, ensuring no data loss even if the downstream processor is temporarily unavailable.
@@ -122,8 +122,8 @@ These are recorded immediately by the API server, ensuring no data loss even if 
 sequenceDiagram
   autonumber
   participant V as Provider
-  participant A as app_apiserver
-  participant D as db
+  participant A as app-apiserver
+  participant D as app-db
 
   Note over V,A: Inbound webhook
   V->>A: POST /api/webhooks/* (inbound)
@@ -139,7 +139,7 @@ sequenceDiagram
 
 ---
 
-## 🗄 Database Schema (Simplified)
+## Database Schema (Simplified)
 
 | Table             | Purpose                                                                                                                                        |
 | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -151,7 +151,7 @@ sequenceDiagram
 ## ⚙️ Design Principles
 
 * **Transactional Outbox Pattern** — ensures reliability and idempotence for outbound messaging.
-* **Provider Agnostic** — app_processor dynamically chooses a provider per message.
+* **Provider Agnostic** — app-processor dynamically chooses a provider per message.
 * **Observability Friendly** — all state transitions (outbox → ok / retry / failed) are persisted.
 * **Extendable Schema** — supports new channels or providers with minimal schema changes.
 
@@ -166,7 +166,5 @@ The messaging service project cleanly separates responsibilities:
 | **app-db**        | Stores all persistent entities and message states.            |
 | **app-apiserver** | Interface for clients and inbound provider events.            |
 | **app-processor** | Handles outbound delivery, retries, and provider interaction. |
-
-Together, these form a robust foundation for a reliable, extensible messaging service.
 
 ---
