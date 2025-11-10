@@ -44,12 +44,9 @@ db-up:
 	@echo "Starting PostgreSQL database..."
 	@docker compose up -d app-db
 
-db-stop:
-	@echo "Stopping PostgreSQL database..."
+db-down:
+	@echo "Tearing down PostgreSQL database..."
 	@docker compose stop app-db
-
-db-rm:
-	@echo "Destroying PostgreSQL database..."
 	@docker compose rm -f app-db
 
 db-logs:
