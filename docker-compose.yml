@@ -59,8 +59,23 @@ services:
       dockerfile: docker/app/Dockerfile
     ports:
       - "8080:8080"
-    working_dir: /home/opam/app
-    command: app
+    command: apiserver
+    environment:
+      DATABASE_URL: postgres://app-db-user:app-db-password@app-db:5432/app-db-id?sslmode=disable
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/healthz"]
+      interval: 5s
+      timeout: 2s
+      retries: 12
+      start_period: 10s
+    depends_on:
+      app-db:
+        condition: service_healthy
+  app-processor:
+    build:
+      context: .
+      dockerfile: docker/app/Dockerfile
+    command: processor
     environment:
       DATABASE_URL: postgres://app-db-user:app-db-password@app-db:5432/app-db-id?sslmode=disable
     healthcheck:

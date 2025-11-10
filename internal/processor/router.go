@@ -40,3 +40,11 @@ func (r SimpleRouter) ChooseProvider(m domain.Message) (provider.Provider, error
 		return nil, fmt.Errorf("no provider for source -> target: %s -> %s", m.Source.Kind, m.Target.Kind)
 	}
 }
+
+func DefaultRouter() SimpleRouter {
+	provRouter := SimpleRouter{
+		SMS:   provider.TwilioProvider{},
+		Email: provider.SendgridProvider{},
+	}
+	return provRouter
+}
